@@ -3,10 +3,27 @@ const express = require('express');
 const { google } = require('googleapis');
 const fs = require('fs');
 const readline = require('readline');
+const multer = require('multer');
+const MailComposer = require('nodemailer/lib/mail-composer');
 
 const app = express();
 app.use(express.json());
 
+
+const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+  
+        // Uploads is the Upload_folder_name
+        cb(null, "uploads")
+    },
+    filename: function (req, file, cb) {
+      cb(null, file.originalname)
+    }
+  });
+
+  const upload = multer({
+      storage: storage
+  });
 
 const SCOPES = [
         'https://mail.google.com/',
@@ -118,20 +135,67 @@ return encodedMail;
 }
 
 //Send Email
+// async function sendEmail(auth,res) {
+//     var raw = makeBody('praveen.dung@qualyval.com', 'yf.yousuf95@gmail.com', 'Email from NodeJS', 'This Email was sent using NodeJS GoogleAPI');
+//     const gmail = google.gmail({version: 'v1', auth});
+//     const result = await gmail.users.messages.send({
+//         auth,
+//         userId: 'me',
+//         resource: {
+//             raw
+//         }
+//     });
+
+//     console.log(result.data);
+
+//     res.send(result.data);
+// }
 async function sendEmail(auth,res) {
-    var raw = makeBody('yf.yousuf95@mail.com', 'yf.yousuf95@gmail.com', 'Email from NodeJS', 'This Email was sent using NodeJS GoogleAPI');
-    const gmail = google.gmail({version: 'v1', auth});
-    const result = await gmail.users.messages.send({
-        auth,
-        userId: 'me',
-        resource: {
-            raw
-        }
-    });
+    console.log(auth);
 
-    console.log(result.data);
+    const content = fs.readFileSync('uploads\\text1.txt');
 
-    res.send(result.data);
+    //can be converted to 'base64' but '7bit' encoding works fine
+    // const contentInBase64 = content.toString('base64');
+
+    let mail = new MailComposer(
+        {
+          to: "yf.yousuf95@gmail.com",
+          text: "Testing using nodemailer",
+          html: " <strong> Email with Attachment </strong>",
+          subject: "Testing email with attachment",
+          textEncoding: "base64",
+          attachments: [
+            {   // encoded string as an attachment
+              filename: 'text1.txt',
+              content,
+              encoding: '7bit'
+            }
+          ]
+        });
+
+        mail.compile().build( (error, msg) => {
+            if (error) return console.log('Error compiling email ' + error);
+        
+            const encodedMessage = Buffer.from(msg)
+              .toString('base64')
+              .replace(/\+/g, '-')
+              .replace(/\//g, '_')
+              .replace(/=+$/, '');
+        
+            const gmail = google.gmail({version: 'v1', auth});
+            gmail.users.messages.send({
+              userId: 'me',
+              resource: {
+                raw: encodedMessage,
+              }
+            }, (err, result) => {
+              if (err) return console.log('NODEMAILER - The API returned an error: ' + err);
+        
+              console.log("NODEMAILER - Sending email reply from server:", result.data);
+            });
+        
+          });
 }
 
 //Routes
@@ -173,6 +237,5 @@ app.post('/sendEmail', async (req,res) => {
         authorize(JSON.parse(content), sendEmail,res);
     });
 });
-
 
 app.listen(3001, () => console.log('Server listening on port 3001'));
