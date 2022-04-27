@@ -119,7 +119,7 @@ return encodedMail;
 
 //Send Email
 async function sendEmail(auth,res) {
-    var raw = makeBody('yf.yousuf95@mail.com', 'yf.yousuf95@gmail.com', 'Email from NodeJS', 'This Email was send using NodeJS GoogleAPI');
+    var raw = makeBody('yf.yousuf95@mail.com', 'yf.yousuf95@gmail.com', 'Email from NodeJS', 'This Email was sent using NodeJS GoogleAPI');
     const gmail = google.gmail({version: 'v1', auth});
     const result = await gmail.users.messages.send({
         auth,
